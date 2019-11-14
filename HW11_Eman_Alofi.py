@@ -2,9 +2,7 @@ from collections import defaultdict
 from prettytable import PrettyTable
 from HW08_Eman_Alofi import file_reading_gen
 import os
-import sqlite3
-db_file = '/Users/ealofi3/icloud Drive/Documents/Database_SSW810/test_startup.db'
-db = sqlite3.connect(db_file)
+
 
 class Repository:
     """ This class holds all the data for the repository """
@@ -27,7 +25,7 @@ class Repository:
     def student(self, path):
         """ read student's file """
         try:
-            for studentid, studentname, studentmajor in file_reading_gen(path, 3, sep='\t', header=True):
+            for studentid, studentname, studentmajor in file_reading_gen(path, 3, sep=';', header=True):
                 if studentmajor in self.majordict:
                     self.studentdict[studentid] = Student(studentid, studentname, studentmajor,
                                                           self.majordict[studentmajor])
@@ -41,17 +39,7 @@ class Repository:
     def instructor(self, path):
         """ read instructors """
         try:
-            for instructorid, instructorname, instructordept in file_reading_gen(path, 3, sep='\t', header=True):
-                self.instructordict[instructorid] = Instructor(instructorid, instructorname, instructordept)
-        except FileNotFoundError as fnfe:
-            print(fnfe)
-        except ValueError as ve:
-            print(ve)
-
-    def add_new_instructor(self, db_path):
-        """Read Instructor's file from database file """
-        try:
-            for instructorid, instructorname, instructordept in file_reading_gen(db_path, 3, sep='\t', header=True):
+            for instructorid, instructorname, instructordept in file_reading_gen(path, 3, sep='|', header=True):
                 self.instructordict[instructorid] = Instructor(instructorid, instructorname, instructordept)
         except FileNotFoundError as fnfe:
             print(fnfe)
@@ -61,7 +49,7 @@ class Repository:
     def gradesprocessing(self, path):
         """To read grades files """
         try:
-            for studentid, studentcourse, studentgrade, instructorid in file_reading_gen(path, 4, sep='\t', header=True):
+            for studentid, studentcourse, studentgrade, instructorid in file_reading_gen(path, 4, sep='|', header=True):
                 if studentid in self.studentdict:
                     self.studentdict[studentid].add_coursegrade(studentcourse, studentgrade)
                 else:
@@ -103,12 +91,6 @@ class Repository:
             for row in instructor.instructordetails():
                 pt.add_row(row)
         print(pt)
-
-    def db_ptableinstructor(self):
-        """Print all instructors data from database file """
-        for row in db.execute("select CWID, Name, Dept from Instructors "):
-            print(row)
-
 
     def ptablemajor(self):
         """Print all majors prettytable"""
@@ -191,9 +173,9 @@ class Major:
 
 
 def main():
-    wdir10 = '/Users/jrr/Documents/Stevens/810/Assignments/HW10_Repository_Test'
-    wdir_bad_data = '/Users/jrr/Documents/Stevens/810/Assignments/HW10_Repository_BadData'
-    wdir_bad_fields = '/Users/jrr/Documents/Stevens/810/Assignments/HW10_Repository_BadFields'
+    wdir10 ='/Users/ealofi3/Documents/good_data'
+    wdir_bad_data = '/Users/ealofi3/Documents/bad_data'
+    wdir_bad_fields = '/Users/ealofi3/Documents/bad_field'
 
     print("Good data")
     _ = Repository(wdir10)
@@ -208,8 +190,7 @@ def main():
 
     print("\nNon-existent Data Directory\n")
     _ = Repository("Not A Directory")
-
-
+    
 if __name__ == "__main__":
     main()
 
