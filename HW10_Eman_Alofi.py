@@ -1,53 +1,55 @@
 from collections import defaultdict
 from prettytable import PrettyTable
 from HW08_Eman_Alofi import file_reading_gen
+import os
 
 
 class Repository:
-    """This class holds all the files need to be readed"""
+    """ This class holds all the data for the repository """
 
     def __init__(self, cwd):
         self.cwd = cwd
         self.studentdict = {}
         self.instructordict = {}
         self.majordict = {}
-        self.student(self.cwd)
-        self.instructor(self.cwd)
-        self.gradesprocessing(self.cwd)
-        self.majors(self.cwd)
+
+        self.majors(os.path.join(self.cwd, "majors.txt"))
+        self.student(os.path.join(self.cwd, "students.txt"))
+        self.instructor(os.path.join(self.cwd, "instructors.txt"))
+        self.gradesprocessing(os.path.join(self.cwd, "grades.txt"))
+
+        self.ptablestudent()
+        self.ptableinstructor()
+        self.ptablemajor()
 
     def student(self, path):
-        """To read students' file"""
+        """ read student's file """
         try:
-            student_file = open(path, "r")
-        except FileNotFoundError:
-            raise FileNotFoundError("File is not finiding ")
-        else:
-
-            for studentid, studentname, studentmajor in file_reading_gen(student_file, 3, sep=';', header=True):
-                self.studentdict[studentid] = Student(studentid, studentname, studentmajor)
+            for studentid, studentname, studentmajor in file_reading_gen(path, 3, sep=';', header=True):
+                if studentmajor in self.majordict:
+                    self.studentdict[studentid] = Student(studentid, studentname, studentmajor,
+                                                          self.majordict[studentmajor])
+                else:
+                    print(f"WARNING: student {studentid} has an unknown major {studentmajor}")
+        except FileNotFoundError as fnfe:
+            print(fnfe)
+        except ValueError as ve:
+            print(ve)
 
     def instructor(self, path):
-        """To read Instrcutors' file"""
-
+        """ read instructors """
         try:
-            instructor_file = open(path, "r")
-        except FileNotFoundError:
-            raise FileNotFoundError("File is not finiding ")
-        else:
-
-            for  instructorid, instructorname, instructordept in file_reading_gen(instructor_file, 3, sep='|', header=True)
+            for instructorid, instructorname, instructordept in file_reading_gen(path, 3, sep='|', header=True):
                 self.instructordict[instructorid] = Instructor(instructorid, instructorname, instructordept)
+        except FileNotFoundError as fnfe:
+            print(fnfe)
+        except ValueError as ve:
+            print(ve)
 
     def gradesprocessing(self, path):
         """To read grades files """
         try:
-            gradesprocessing_file = open(path, 'r')
-        except FileNotFoundError:
-            print('There is an error with opening the file to analyze')
-
-        else:
-            for studentid, studentcourse, studentgrade, instructorid in file_reading_gen(gradesprocessing_file, 3, sep='|', header=True)
+            for studentid, studentcourse, studentgrade, instructorid in file_reading_gen(path, 4, sep='|', header=True):
                 if studentid in self.studentdict:
                     self.studentdict[studentid].add_coursegrade(studentcourse, studentgrade)
                 else:
@@ -56,24 +58,28 @@ class Repository:
                     self.instructordict[instructorid].add_coursestudent(studentcourse)
                 else:
                     print('Not finding the Instructor')
+        except FileNotFoundError as fnfe:
+            print(fnfe)
+        except ValueError as ve:
+            print(ve)
 
-    def major(self, path):
+    def majors(self, path):
         """To read majors' file"""
         try:
-            major_file = open(path, 'r')
-        except FileNotFoundError:
-            print('There is an error with opening the file to analyze')
+            for major, flag, course in file_reading_gen(path, 3, sep='\t', header=True):
+                if major not in self.majordict:
+                    self.majordict[major] = Major(major)
 
-        else:
-               for  major, flag, course in file_reading_gen(major_file, 3, sep='\t', header=True)
-                     if major not in self.majordict:
-                        self.majordict[major] = Major(major)
-                else:
-                    self.majordict[major].add_course(course, flag)
+                self.majordict[major].add_course(course, flag)
+        except FileNotFoundError as fnfe:
+            print(fnfe)
+        except ValueError as ve:
+            print(ve)
 
     def ptablestudent(self):
         """Print all students prettytable"""
-        pt = PrettyTable(field_names=['CWID', 'Name', 'Major', 'Completed Courses', 'Remaining Required', '"Remaining electives'])
+        pt = PrettyTable(
+            field_names=['CWID', 'Name', 'Major', 'Completed Courses', 'Remaining Required', '"Remaining electives'])
         for student in self.studentdict.values():
             pt.add_row(student.studentdetails())
         print(pt)
@@ -82,36 +88,36 @@ class Repository:
         """Print all instructors prettytable"""
         pt = PrettyTable(field_names=['CWID', 'Name', 'Dept', 'Course', 'Students'])
         for instructor in self.instructordict.values():
-            pt.add_row(instructor.instructordetails())
+            for row in instructor.instructordetails():
+                pt.add_row(row)
         print(pt)
 
-    def petablemajor(self):
+    def ptablemajor(self):
         """Print all majors prettytable"""
         pt = PrettyTable(field_names=['major_name', 'Required_courses ', 'Elective_courses'])
         for major in self.majordict.values():
-            pt.add_row(major.majordetails())
+            pt.add_row(major.major_details())
         print(pt)
-
 
 
 class Student:
 
-    def __init__(self, studentid, studentname, studentmajor):
+    def __init__(self, studentid, studentname, studentmajor, major):
         self.studentid = studentid
         self.studentname = studentname
         self.studentmajor = studentmajor
         self.coursegrades = {}
-        m = Major(self, self.dept)
+        self.major = major
 
     def add_coursegrade(self, course, grade):
         """To add course grade """
         self.coursegrades[course] = grade
 
-
     def studentdetails(self):
         """To return students deitals info """
-        return [self.studentid, self.studentname, self.student_major, m.completed_courses(self),
-                m.remaning_cources(self),m.elective_cources(self)]
+        completed = self.major.completed_courses(self.coursegrades)
+        return [self.studentid, self.studentname, self.studentmajor, sorted(completed),
+                sorted(self.major.remaining_courses(completed)), sorted(self.major.elective_courses(completed))]
 
 
 class Instructor:
@@ -132,17 +138,12 @@ class Instructor:
             yield [self.instructorid, self.instructorname, self.instructordept, course, studentnum]
 
 
-
 class Major:
 
     def __init__(self, dept):
         self.dept = dept
         self.required = set()
         self.electives = set()
-        self.completed_courses = set()
-        self.remaning_courses = set()
-        self.remaning_elective_courses = set()
-        s = Student(self, studentid, studentname, studentmajor)
 
     def add_course(self, course, type_course):
         """To add either Requried  or Elective course"""
@@ -151,36 +152,47 @@ class Major:
         elif type_course == "E":
             self.electives.add(course)
 
-    def completed_courses(self):
+    def completed_courses(self, courses_grades):
         """To add the completed cources by students"""
-        for course, grade in s.coursegrades.items():
-            if grade in {'A', 'A-', 'B', 'B-', 'C', 'C-'}:
-                self.completed_courses.add(course)
+        return {course for course, grade in courses_grades.items() if grade in {'A', 'A-', 'B+', 'B', 'B-', 'C', 'C-'}}
 
-    def remaning_cources(self):
+    def remaining_courses(self, completed):
         """To check the reamaninig cource of the students"""
-        return self.completed_courses - self.required
+        return self.required - completed
 
-    def elective_cources(self):
+    def elective_courses(self, completed):
         """To check the reamaninig elective courses """
-        if self.completed_courses.intersection(self.electives):
-            return None
+        if completed.intersection(self.electives):
+            return {}
         else:
             return self.electives
 
-   def major_details(self):
-       """return all major details"""
-       return [self.dept, sorted(self.required), sorted(self.electives)]
+    def major_details(self):
+        """return all major details"""
+        return [self.dept, sorted(self.required), sorted(self.electives)]
 
 
 def main():
-    cwd = "/Users/ealofi3/Desktop/test"
-    repos = Repository(cwd)
-    repos.ptablestudent()
-    repos.ptableinstructor()
-    repos.petablemajor()
+    wdir10 = '/Users/jrr/Documents/Stevens/810/Assignments/HW10_Repository_Test'
+    wdir_bad_data = '/Users/jrr/Documents/Stevens/810/Assignments/HW10_Repository_BadData'
+    wdir_bad_fields = '/Users/jrr/Documents/Stevens/810/Assignments/HW10_Repository_BadFields'
+
+    print("Good data")
+    _ = Repository(wdir10)
+
+    print("\nBad Data")
+    print("--> should report student with unknown major, grade for unknown student, and grade for unknown instructor")
+    _ = Repository(wdir_bad_data)
+
+    print("\nBad Fields\n")
+    print("should report bad student, grade, instructor feeds")
+    _ = Repository(wdir_bad_fields)
+
+    print("\nNon-existent Data Directory\n")
+    _ = Repository("Not A Directory")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
+
 
