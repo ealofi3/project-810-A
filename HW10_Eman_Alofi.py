@@ -173,9 +173,9 @@ class Major:
 
 
 def main():
-    wdir10 ='/Users/ealofi3/icloud Drive/Documents/good_data'
-    wdir_bad_data = '/Users/ealofi3/icloud Drive/Documents/bad_data'
-    wdir_bad_fields = '/Users/ealofi3/icloud Drive/Documents/bad_field'
+    wdir10 ='/Users/ealofi3/Documents/good_data'
+    wdir_bad_data = '/Users/ealofi3/Documents/bad_data'
+    wdir_bad_fields = '/Users/ealofi3/Documents/bad_field'
 
     print("Good data")
     _ = Repository(wdir10)
@@ -190,8 +190,7 @@ def main():
 
     print("\nNon-existent Data Directory\n")
     _ = Repository("Not A Directory")
-
-
+    
 if __name__ == "__main__":
     main()
 
